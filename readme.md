@@ -19,10 +19,7 @@ docker compose -f docker/deploy/dev.yml up
   - 1 kafka, listening on 9092
   - 1 mysql, listening on 3036
   - 2 consultations  
-* for some reason, the `profile` service can not be started by `docker cmopose`, so we need to open another terminal 
-and follow the steps bellow to start the `profile` service
-  - run `make` if you have installed `make` in your computer, otherwise run `go build -o ./bin/ ./cmd/profile`
-  - run `./bin/profile` to start the `profile` service
+  - 1 profile, listening on 10001
 
 * to simulate the create and update event, the `profile` provide the restful apis below
   - `PUT` localhost:10001/profile/add  
@@ -33,3 +30,8 @@ and follow the steps bellow to start the `profile` service
     update multiple patient profiles
   - `GET` localhost:10001/profile/query?id=1
     query one patient profile by patient id
+
+### stop and remove all containers
+```shell
+docker compose -f docker/deploy/dev.yml stop && docker compose -f docker/deploy/dev.yml rm -y
+```

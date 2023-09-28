@@ -6,7 +6,6 @@ services:
     restart: unless-stopped
     image: "wurstmeister/zookeeper:latest"
     container_name: heidi_zookeeper_dev
-#    network_mode: host
     ports:
       - "2181:2181"
 
@@ -14,7 +13,6 @@ services:
     restart: unless-stopped
     image: "wurstmeister/kafka:latest"
     container_name: heidi_kafka_dev
-#    network_mode: host
     depends_on:
       - heidi_zookeeper_dev
     ports:
@@ -22,17 +20,14 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: heidi_zookeeper_dev:2181
-
       KAFKA_LISTENERS: 'PLAINTEXT://:9092'
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://heidi_kafka_dev:9092
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'false'
 
   heidi_mysql_dev:
     restart: unless-stopped
     image: "mysql:8.0.18"
     container_name: heidi_mysql_dev
-#    network_mode: host
     environment:
       MYSQL_ROOT_PASSWORD: abcqwe321
       MYSQL_DATABASE: heidi
@@ -45,52 +40,51 @@ services:
       - ../init/mysql/:/docker-entrypoint-initdb.d/
     tty: true
 
-#  heidi_profile_dev:
-#    restart: unless-stopped
-#    image: heidi_task:v1
-#    container_name: heidi_profile_dev
-#    network_mode: host
-#    depends_on:
-#      - heidi_zookeeper_dev
-#      - heidi_kafka_dev
-#      - heidi_mysql_dev
-#    links:
-#      - heidi_kafka_dev
-#    environment:
-#      MYSQL_DSN: user1:abcqwe321@tcp(localhost:3306)/heidi?charset=utf8&parseTime=True&loc=Local
-#      KAFKA_HOST: localhost:9092
-#      KAFKA_GROUP: dev-group
-#      KAFKA_TOPIC: dev-topic
-#    ports:
-#      - "0.0.0.0:10001:10001"
-#    command:
-#      - sh
-#      - -c
-#      - |
-#        dockerize -wait tcp://localhost:3306 -wait tcp://localhost:9092 -timeout 120s
-#        /app/bin/profile
-#    tty: true
+  heidi_profile_dev:
+    restart: unless-stopped
+    image: heidi_task:v1
+    container_name: heidi_profile_dev
+    depends_on:
+      - heidi_kafka_dev
+      - heidi_mysql_dev
+    links:
+      - heidi_kafka_dev
+    environment:
+      MYSQL_DSN: user1:abcqwe321@tcp(heidi_mysql_dev:3306)/heidi?charset=utf8&parseTime=True&loc=Local
+      KAFKA_HOST: heidi_kafka_dev:9092
+      KAFKA_GROUP: dev-group
+      KAFKA_TOPIC: dev-topic
+    ports:
+      - "10001:10001"
+    command:
+      - sh
+      - -c
+      - |
+        dockerize -wait tcp://heidi_mysql_dev:3306 -wait tcp://heidi_kafka_dev:9092 -timeout 120s
+        /app/bin/profile
+    tty: true
 
   heidi_consultation_dev:
     restart: unless-stopped
     image: heidi_task:v1
-    network_mode: host
     deploy:
       replicas: 2
     depends_on:
       - heidi_zookeeper_dev
       - heidi_kafka_dev
       - heidi_mysql_dev
-#      - heidi_profile_dev
+    links:
+      - heidi_kafka_dev
+      - heidi_mysql_dev
     environment:
-      MYSQL_DSN: user1:abcqwe321@tcp(localhost:3306)/heidi
-      KAFKA_HOST: localhost:9092
+      MYSQL_DSN: user1:abcqwe321@tcp(heidi_mysql_dev:3306)/heidi
+      KAFKA_HOST: heidi_kafka_dev:9092
       KAFKA_GROUP: dev-group
       KAFKA_TOPIC: dev-topic
     command:
       - sh
       - -c
       - |
-        dockerize -wait tcp://localhost:3306 -wait tcp://localhost:9092 -timeout 120s
+        dockerize -wait tcp://heidi_mysql_dev:3306 -wait tcp://heidi_kafka_dev:9092 -timeout 120s
         /app/bin/consultation
     tty: true

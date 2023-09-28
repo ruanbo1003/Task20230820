@@ -9,7 +9,6 @@ import (
 )
 
 func init() {
-
 }
 
 type App struct {
